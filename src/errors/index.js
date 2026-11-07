@@ -39,4 +39,27 @@ class NoSuchDoor extends DomainError {
   }
 }
 
-module.exports = { DomainError, ValidationError, NoSuchTower, NoSuchDoor };
+class NoSuchFlat extends DomainError {
+  constructor(flat) {
+    super(400, '/errors/no-such-flat', 'No such flat', `There is no flat ${flat} in this tower`);
+  }
+}
+
+class NoDoorFree extends DomainError {
+  constructor(sizeClass, freeSizes) {
+    super(409, '/errors/no-door-free', 'No door free', `No ${sizeClass} door is free`);
+    this.freeSizes = freeSizes;
+  }
+
+  extras() {
+    return { freeSizes: this.freeSizes };
+  }
+}
+
+class NoSuchParcel extends DomainError {
+  constructor(parcelId) {
+    super(404, '/errors/no-such-parcel', 'No such parcel', `There is no parcel ${parcelId}`);
+  }
+}
+
+module.exports = { DomainError, ValidationError, NoSuchTower, NoSuchDoor, NoSuchFlat, NoDoorFree, NoSuchParcel };

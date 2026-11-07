@@ -17,7 +17,6 @@ function readCsv(file) {
 
 /** Loads tower A, its doors and its residents - once. A second start finds the tower and adds nothing. */
 async function seed({ settings }) {
-  await doors.ready();
   if (await doors.towerExists(TOWER)) return;
   await doors.addTower({
     code: TOWER,

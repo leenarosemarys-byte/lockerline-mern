@@ -1,33 +1,85 @@
 'use strict';
-const { NoSuchTower, NoSuchDoor } = require('../errors');
 
-/** A door's state is derived from what it holds, on every read; nothing stores it. */
-function stateOf(door) {
-  return door.currentParcelId === null ? 'free' : 'holding';
-}
-
-function makeDoorService({ repository }) {
-  async function requireTower(tower) {
-    if (!(await repository.towerExists(tower))) throw new NoSuchTower(tower);
+function makeDoorService({ repository, parcels, clock }) {
+  async function requireTower(towerId) {
+    if (!(await repository.towerExists(towerId))) {
+      throw new Error('No such tower');
+    }
   }
 
-  /** The wall, optionally only one size and/or one state; `free` counts the free doors among those shown. */
-  async function wall(tower, { size, state } = {}) {
-    await requireTower(tower);
-    const doors = (await repository.doorsOf(tower))
-      .map((d) => ({ no: d.no, size: d.sizeClass, state: stateOf(d) }))
-      .filter((d) => (!size || d.size === size) && (!state || d.state === state));
-    return { tower, free: doors.filter((d) => d.state === 'free').length, doors };
+  /** Whole seconds a parcel has waited, up to now. */
+  function dwellSeconds(parcel) {
+    return Math.floor(
+      (clock.now().getTime() - parcel.droppedAt.getTime()) / 1000
+    );
   }
 
-  async function door(tower, no) {
-    await requireTower(tower);
-    const found = await repository.door(tower, no);
-    if (!found) throw new NoSuchDoor(tower, no);
-    return { no: found.no, size: found.sizeClass, state: stateOf(found) };
+  /** A free door has no parcel details; a holding door includes its parcel and dwell time. */
+  function shape(doorDoc, parcel) {
+    const shaped = {
+      no: doorDoc.no,
+      size: doorDoc.sizeClass,
+      state: stateOf(doorDoc),
+    };
+
+    return parcel
+      ? {
+          ...shaped,
+          parcelId: parcel.parcelId,
+          dwellSeconds: dwellSeconds(parcel),
+        }
+      : shaped;
+  }
+
+  async function wall(towerId, filters = {}) {
+    await requireTower(towerId);
+
+    const all = await repository.doorsOf(towerId);
+
+    const held = await parcels.byIds(
+      all
+        .filter((d) => d.currentParcelId !== null)
+        .map((d) => d.currentParcelId)
+    );
+
+    const byId = new Map(held.map((p) => [p.parcelId, p]));
+
+    const doors = all
+      .map((d) => shape(d, byId.get(d.currentParcelId)))
+      .filter((d) => !filters.size || d.size === filters.size)
+      .filter((d) => !filters.state || d.state === filters.state);
+
+    return {
+      doors,
+      free: doors.filter((d) => d.state === 'free').length,
+    };
+  }
+
+  /** One door; a holding door read alone also names the flat its parcel is for. */
+  async function door(towerId, no) {
+    await requireTower(towerId);
+
+    const found = await repository.door(towerId, no);
+
+    if (!found) throw new Error('No such door');
+
+    if (found.currentParcelId === null) return shape(found);
+
+    const parcel = await parcels.byId(found.currentParcelId);
+    const { dwellSeconds: dwell, ...rest } = shape(found, parcel);
+
+    return {
+      ...rest,
+      flat: parcel.flat,
+      dwellSeconds: dwell,
+    };
   }
 
   return { wall, door };
+}
+
+function stateOf(doorDoc) {
+  return doorDoc.currentParcelId ? 'holding' : 'free';
 }
 
 module.exports = { makeDoorService };

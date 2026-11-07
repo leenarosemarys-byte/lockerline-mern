@@ -1,4 +1,6 @@
+
 'use strict';
+
 const express = require('express');
 
 const db = require('./db');
@@ -28,10 +30,11 @@ function createApp({ settings, clock }) {
   });
 
   const drops = makeDropService({
-    repository: doorRepository,
+    doors: doorRepository,
     parcels: parcelRepository,
-    db,
+    settings,
     clock,
+    inTransaction: db.inTransaction,
   });
 
   const parcels = makeParcelService({

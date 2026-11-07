@@ -1,33 +1,51 @@
 'use strict';
+
 const mongoose = require('mongoose');
 
-const Parcel = mongoose.model('Parcel', new mongoose.Schema({
+const parcelSchema = new mongoose.Schema({
   parcelId: { type: String, required: true, unique: true },
   towerId: { type: String, required: true },
   flat: { type: String, required: true },
   sizeClass: { type: String, enum: ['S', 'M', 'L'], required: true },
   doorId: { type: String, required: true },
   droppedAt: { type: Date, required: true },
+  codeHash: { type: String, required: true },
+  codeExpiresAt: { type: Date, required: true },
+  codeUsedAt: { type: Date, default: null },
   collectedAt: { type: Date, default: null },
-  state: { type: String, enum: ['holding', 'collected'], default: 'holding' },
-}, { collection: 'parcels' }));
+  state: { type: String, enum: ['holding', 'collected'], required: true },
+}, { collection: 'parcels' });
 
-/** The next parcel id, P001 first: 'P' and a three-digit running number, taken inside the drop's transaction. */
+const Parcel = mongoose.model('Parcel', parcelSchema);
+
 async function nextId(session) {
-  const count = await Parcel.countDocuments({}, { session });
-  return `P${String(count + 1).padStart(3, '0')}`;
+  const last = await Parcel.findOne()
+    .sort({ parcelId: -1 })
+    .session(session)
+    .lean();
+
+  const nextNumber = last
+    ? Number(last.parcelId.replace(/\D/g, '')) + 1
+    : 1;
+
+  return `P${String(nextNumber).padStart(4, '0')}`;
 }
 
-async function insert(parcel, session) {
-  await Parcel.create([parcel], { session });
+function insert(data, session) {
+  return Parcel.create([data], { session });
 }
 
 function byId(parcelId) {
   return Parcel.findOne({ parcelId }).lean();
 }
 
+/** Whether a parcel still waiting in its door already has this code hash (two waiting codes must differ). */
+function codeHashWaiting(codeHash, session) {
+  return Parcel.exists({ codeHash, state: 'holding' }).session(session);
+}
+
 function byIds(parcelIds) {
   return Parcel.find({ parcelId: { $in: parcelIds } }).lean();
 }
 
-module.exports = { nextId, insert, byId, byIds };
+module.exports = { nextId, insert, byId, codeHashWaiting, byIds };

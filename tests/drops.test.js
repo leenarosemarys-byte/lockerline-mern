@@ -18,7 +18,7 @@ let mongo;
 let settings;
 
 beforeAll(async () => {
- mongo = await MongoMemoryReplSet.create();
+  mongo = await MongoMemoryReplSet.create();
   await connect(mongo.getUri('wall'));
   settings = loadSettings();
 });
@@ -129,4 +129,18 @@ test('POST /drops returns 500 and rolls back when the door write fails', async (
   } finally {
     holdSpy.mockRestore();
   }
+});
+
+test('POST /drops succeeds using the injected fixed clock', async () => {
+  await seed({ settings, clock });
+
+  const res = await request(createApp({ settings, clock }))
+    .post('/drops')
+    .send({ sizeClass: 'M', flat: '101' });
+
+  expect(res.status).toBe(201);
+  expect(res.body.code).toMatch(/^[0-9]{6}$/);
+  expect(res.body.droppedAt).toBe('2026-09-25T13:10:00Z');
+  expect(res.body.expiresAt).toBe('2026-09-27T13:10:00Z');
+  expect(res.body.state).toBe('holding');
 });

@@ -1,9 +1,11 @@
 'use strict';
 
+const { NoSuchTower, NoSuchDoor } = require('../errors');
+
 function makeDoorService({ repository, parcels, clock }) {
   async function requireTower(towerId) {
     if (!(await repository.towerExists(towerId))) {
-      throw new Error('No such tower');
+      throw new NoSuchTower(towerId);
     }
   }
 
@@ -61,9 +63,13 @@ function makeDoorService({ repository, parcels, clock }) {
 
     const found = await repository.door(towerId, no);
 
-    if (!found) throw new Error('No such door');
+    if (!found) {
+      throw new NoSuchDoor(towerId, no);
+    }
 
-    if (found.currentParcelId === null) return shape(found);
+    if (found.currentParcelId === null) {
+      return shape(found);
+    }
 
     const parcel = await parcels.byId(found.currentParcelId);
     const { dwellSeconds: dwell, ...rest } = shape(found, parcel);

@@ -75,10 +75,14 @@ class CodeExpired extends DomainError {
   }
 }
 
-/** For now a valid code gets this plain 501, because opening the door is not available yet (no type is named for it). */
-class PickupNotYetAvailable extends DomainError {
+class CodeUsed extends DomainError {
   constructor() {
-    super(501, 'about:blank', 'Not Implemented', 'This code is valid, but opening the door is not available yet');
+    super(
+      409,
+      '/errors/code-used',
+      'Code used',
+      'This code has already opened its door'
+    );
   }
 }
 
@@ -92,5 +96,5 @@ module.exports = {
   NoSuchParcel,
   NoSuchCode,
   CodeExpired,
-  PickupNotYetAvailable,
+  CodeUsed,
 };

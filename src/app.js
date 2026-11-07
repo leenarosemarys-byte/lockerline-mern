@@ -43,7 +43,13 @@ function createApp({ settings, clock }) {
     repository: parcelRepository,
   });
 
-  const pickups = makePickupService({ parcels: parcelRepository, settings, clock });
+  const pickups = makePickupService({
+    parcels: parcelRepository,
+    doors: doorRepository,
+    settings,
+    clock,
+    inTransaction: db.inTransaction,
+  });
 
   app.use(makeDoorRouter(doors));
   app.use(makeDropRouter(drops));

@@ -13,6 +13,7 @@ const parcelSchema = new mongoose.Schema({
   codeExpiresAt: { type: Date, required: true },
   codeUsedAt: { type: Date, default: null },
   collectedAt: { type: Date, default: null },
+  dwellSeconds: { type: Number, default: null },
   state: { type: String, enum: ['holding', 'collected'], required: true },
 }, { collection: 'parcels' });
 
@@ -44,9 +45,18 @@ function codeHashWaiting(codeHash, session) {
   return Parcel.exists({ codeHash, state: 'holding' }).session(session);
 }
 
-/** The parcels still waiting in a tower's doors, with their code hashes. */
-function waiting(towerId) {
-  return Parcel.find({ towerId, state: 'holding' }).lean();
+/** Every parcel of a tower with its code hash (waiting or collected: a used code must still be recognised). */
+function withCodes(towerId, session) {
+  return Parcel.find({ towerId }).session(session).lean();
+}
+
+/** The parcel is collected: its code is used up and its dwell is stored, never recomputed on read. */
+async function collect(parcelId, { collectedAt, dwellSeconds }, session) {
+  await Parcel.updateOne(
+    { parcelId },
+    { $set: { state: 'collected', collectedAt, dwellSeconds, codeUsedAt: collectedAt } },
+    { session }
+  );
 }
 
 function byIds(parcelIds) {
@@ -58,6 +68,7 @@ module.exports = {
   insert,
   byId,
   codeHashWaiting,
-  waiting,
+  withCodes,
+  collect,
   byIds,
 };

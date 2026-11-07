@@ -1,4 +1,3 @@
-
 'use strict';
 
 const express = require('express');
@@ -15,6 +14,9 @@ const { makeDropRouter } = require('./drops/router');
 
 const { makeParcelService } = require('./parcels/service');
 const { makeParcelRouter } = require('./parcels/router');
+
+const { makePickupService } = require('./pickups/service');
+const { makePickupRouter } = require('./pickups/router');
 
 const { notFound, errorHandler } = require('./errors/middleware');
 
@@ -41,9 +43,12 @@ function createApp({ settings, clock }) {
     repository: parcelRepository,
   });
 
+  const pickups = makePickupService({ parcels: parcelRepository, settings, clock });
+
   app.use(makeDoorRouter(doors));
   app.use(makeDropRouter(drops));
   app.use(makeParcelRouter(parcels));
+  app.use(makePickupRouter(pickups));
 
   app.use(notFound);
   app.use(errorHandler);

@@ -62,4 +62,35 @@ class NoSuchParcel extends DomainError {
   }
 }
 
-module.exports = { DomainError, ValidationError, NoSuchTower, NoSuchDoor, NoSuchFlat, NoDoorFree, NoSuchParcel };
+/** No-such-code and code-expired share 404, so a guesser cannot tell them apart; only the type differs. */
+class NoSuchCode extends DomainError {
+  constructor() {
+    super(404, '/errors/no-such-code', 'No such code', 'There is no parcel waiting for this code');
+  }
+}
+
+class CodeExpired extends DomainError {
+  constructor() {
+    super(404, '/errors/code-expired', 'Code expired', 'The free window of this code has passed');
+  }
+}
+
+/** For now a valid code gets this plain 501, because opening the door is not available yet (no type is named for it). */
+class PickupNotYetAvailable extends DomainError {
+  constructor() {
+    super(501, 'about:blank', 'Not Implemented', 'This code is valid, but opening the door is not available yet');
+  }
+}
+
+module.exports = {
+  DomainError,
+  ValidationError,
+  NoSuchTower,
+  NoSuchDoor,
+  NoSuchFlat,
+  NoDoorFree,
+  NoSuchParcel,
+  NoSuchCode,
+  CodeExpired,
+  PickupNotYetAvailable,
+};

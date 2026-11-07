@@ -44,8 +44,20 @@ function codeHashWaiting(codeHash, session) {
   return Parcel.exists({ codeHash, state: 'holding' }).session(session);
 }
 
+/** The parcels still waiting in a tower's doors, with their code hashes. */
+function waiting(towerId) {
+  return Parcel.find({ towerId, state: 'holding' }).lean();
+}
+
 function byIds(parcelIds) {
   return Parcel.find({ parcelId: { $in: parcelIds } }).lean();
 }
 
-module.exports = { nextId, insert, byId, codeHashWaiting, byIds };
+module.exports = {
+  nextId,
+  insert,
+  byId,
+  codeHashWaiting,
+  waiting,
+  byIds,
+};

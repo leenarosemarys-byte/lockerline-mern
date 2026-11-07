@@ -1,4 +1,5 @@
 'use strict';
+
 const express = require('express');
 const { z } = require('zod');
 const { parse } = require('../validate');
@@ -11,14 +12,11 @@ const dropSchema = z.object({
 function makeDropRouter(service) {
   const router = express.Router();
 
-  router.post('/drops', async (req, res, next) => {
-    try {
-      const body = parse(dropSchema, req.body);
-      const result = await service.drop(body);
-      res.location(`/parcels/${result.parcelId}`).status(201).json(result);
-    } catch (err) {
-      next(err);
-    }
+  router.post('/drops', async (req, res) => {
+    const body = parse(dropSchema, req.body);
+    const result = await service.drop(body);
+
+    res.location(`/parcels/${result.parcelId}`).status(201).json(result);
   });
 
   return router;

@@ -1,3 +1,4 @@
+
 'use strict';
 
 const mongoose = require('mongoose');
@@ -45,9 +46,9 @@ function codeHashWaiting(codeHash, session) {
   return Parcel.exists({ codeHash, state: 'holding' }).session(session);
 }
 
-/** Every parcel of a tower with its code hash (waiting or collected: a used code must still be recognised). */
-function withCodes(towerId, session) {
-  return Parcel.find({ towerId }).session(session).lean();
+/** Every parcel of a tower with this code hash (waiting or collected: a used code must still be recognised). */
+function withCodes(towerId, codeHash, session) {
+  return Parcel.find({ towerId, codeHash }).session(session).lean();
 }
 
 /** The parcel is collected: its code is used up and its dwell is stored, never recomputed on read. */

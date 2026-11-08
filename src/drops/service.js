@@ -1,3 +1,4 @@
+
 'use strict';
 
 const { NoSuchFlat, NoDoorFree } = require('../errors');
@@ -7,7 +8,7 @@ const { newCode, hashCode } = require('../parcels/codes');
 const TOWER = 'A';
 const HOUR = 60 * 60 * 1000;
 
-function makeDropService({ doors, parcels, settings, clock, inTransaction }) {
+function makeDropService({ doors, parcels, events, settings, clock, inTransaction }) {
   /** A code no parcel still waiting in a door has (one chance in a million of a clash, so draw again if so). */
   async function freshCode(session) {
     let code = newCode();
@@ -24,6 +25,10 @@ function makeDropService({ doors, parcels, settings, clock, inTransaction }) {
     return code;
   }
 
+  /**
+   * A courier's drop: the free door of exactly this size with the lowest number. Recording the parcel, holding the
+   * door and writing their events happen in one transaction, so a failure part-way leaves none of them.
+   */
   async function drop({ sizeClass, flat }) {
     return inTransaction(async (session) => {
       if (!(await doors.residentExists(TOWER, flat, session))) {
@@ -60,6 +65,13 @@ function makeDropService({ doors, parcels, settings, clock, inTransaction }) {
       }, session);
 
       await doors.hold(TOWER, door.no, parcelId, session);
+
+      await events.record({ towerId: TOWER, parcelId, kind: 'dropped', at: droppedAt, data: { door: door.no } }, session);
+      await events.record(
+        {
+          towerId: TOWER, parcelId, kind: 'code_issued', at: droppedAt, data: { expiresAt: iso(expiresAt) },
+        }, session,
+      );
 
       // The only answer that ever shows the code: the courier hands it to the resident.
       return {

@@ -5,6 +5,7 @@ const express = require('express');
 const db = require('./db');
 const doorRepository = require('./doors/repository');
 const parcelRepository = require('./parcels/repository');
+const eventRepository = require('./events/repository');
 
 const { makeDoorService } = require('./doors/service');
 const { makeDoorRouter } = require('./doors/router');
@@ -32,23 +33,13 @@ function createApp({ settings, clock }) {
   });
 
   const drops = makeDropService({
-    doors: doorRepository,
-    parcels: parcelRepository,
-    settings,
-    clock,
-    inTransaction: db.inTransaction,
+    doors: doorRepository, parcels: parcelRepository, events: eventRepository, settings, clock, inTransaction: db.inTransaction,
   });
 
-  const parcels = makeParcelService({
-    repository: parcelRepository,
-  });
+  const parcels = makeParcelService({ repository: parcelRepository, events: eventRepository });
 
   const pickups = makePickupService({
-    parcels: parcelRepository,
-    doors: doorRepository,
-    settings,
-    clock,
-    inTransaction: db.inTransaction,
+    parcels: parcelRepository, doors: doorRepository, events: eventRepository, settings, clock, inTransaction: db.inTransaction,
   });
 
   app.use(makeDoorRouter(doors));

@@ -1,7 +1,8 @@
 'use strict';
 
 const express = require('express');
-
+const swaggerUi = require('swagger-ui-express');
+const { document } = require('./openapi');
 const db = require('./db');
 const doorRepository = require('./doors/repository');
 const parcelRepository = require('./parcels/repository');
@@ -19,12 +20,14 @@ const { makeParcelRouter } = require('./parcels/router');
 const { makePickupService } = require('./pickups/service');
 const { makePickupRouter } = require('./pickups/router');
 
-const { notFound, errorHandler } = require('./errors/middleware');
+const { makeLastRoute, errorHandler } = require('./errors/middleware');
 
 function createApp({ settings, clock }) {
   const app = express();
 
   app.use(express.json());
+  app.get('/openapi.json', (req, res) => res.json(document));
+  app.use('/docs', swaggerUi.serve, swaggerUi.setup(document));
 
   const doors = makeDoorService({
     repository: doorRepository,
@@ -47,7 +50,7 @@ function createApp({ settings, clock }) {
   app.use(makeParcelRouter(parcels));
   app.use(makePickupRouter(pickups));
 
-  app.use(notFound);
+  app.use(makeLastRoute(document.paths));
   app.use(errorHandler);
 
   return app;

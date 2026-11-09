@@ -1,5 +1,22 @@
 'use strict';
 
+/**
+ * Send an error using the application/problem+json format.
+ */
+function problem(req, res, { status, type, title, detail, extras = {} }) {
+  res
+    .status(status)
+    .type('application/problem+json')
+    .json({
+      type,
+      title,
+      status,
+      detail,
+      instance: req.path,
+      ...extras,
+    });
+}
+
 /** A refusal the app gives. Services throw these; the error middleware turns them into problem+json. */
 class DomainError extends Error {
   constructor(status, type, title, detail) {
@@ -7,6 +24,7 @@ class DomainError extends Error {
     this.status = status;
     this.type = type;
     this.title = title;
+    this.detail = detail;
   }
 
   /** Extra fields for this refusal's answer (none by default). */
@@ -77,16 +95,12 @@ class CodeExpired extends DomainError {
 
 class CodeUsed extends DomainError {
   constructor() {
-    super(
-      409,
-      '/errors/code-used',
-      'Code used',
-      'This code has already opened its door'
-    );
+    super(409, '/errors/code-used', 'Code used', 'This code has already opened its door');
   }
 }
 
 module.exports = {
+  problem,
   DomainError,
   ValidationError,
   NoSuchTower,
